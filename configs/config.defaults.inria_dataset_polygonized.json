@@ -9,6 +9,10 @@
     "defaults_filepath": "configs/eval_params.inria_dataset.json"  // Path from the project's root to a JSON with default values for eval_params
   },
 
+  "backbone_params": {
+    "defaults_filepath": "configs/backbone_params.unet_resnet101.json"  // Path from the project's root to a JSON with default values for backbone_params
+  },
+
   "optim_params": {
     "gamma": 0.99
   }

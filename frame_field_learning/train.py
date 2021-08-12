@@ -8,8 +8,10 @@ from .model import FrameFieldModel
 from .trainer import Trainer
 from . import losses
 from . import local_utils
-
+import pdb
 from lydorn_utils import print_utils
+
+import sys
 
 try:
     import apex
@@ -36,6 +38,7 @@ def train(gpu, config, shared_dict, barrier, train_ds, val_ds, backbone):
     # os.environ['CUDA_LAUNCH_BLOCKING'] = 1
     torch.autograd.set_detect_anomaly(True)
 
+
     # --- Setup DistributedDataParallel --- #
     rank = config["nr"] * config["gpus"] + gpu
     torch.distributed.init_process_group(
@@ -44,7 +47,6 @@ def train(gpu, config, shared_dict, barrier, train_ds, val_ds, backbone):
         world_size=config["world_size"],
         rank=rank
     )
-
     if gpu == 0:
         print("# --- Start training --- #")
 
@@ -58,9 +60,8 @@ def train(gpu, config, shared_dict, barrier, train_ds, val_ds, backbone):
     torch.cuda.set_device(gpu)
 
     # --- Online transform performed on the device (GPU):
-    train_online_cuda_transform = data_transforms.get_online_cuda_transform(config,
-                                                                            augmentations=config["data_aug_params"][
-                                                                                "enable"])
+    train_online_cuda_transform = data_transforms.get_online_cuda_transform(config, augmentations=config["data_aug_params"]["enable"])
+
     if val_ds is not None:
         eval_online_cuda_transform = data_transforms.get_online_cuda_transform(config, augmentations=False)
     else:
@@ -76,6 +77,7 @@ def train(gpu, config, shared_dict, barrier, train_ds, val_ds, backbone):
     if gpu == 0:
         print(f"Train dataset has {len(train_ds)} samples.")
 
+
     train_sampler = torch.utils.data.distributed.DistributedSampler(train_ds,
                                                                     num_replicas=config["world_size"], rank=rank)
     val_sampler = None
@@ -83,8 +85,10 @@ def train(gpu, config, shared_dict, barrier, train_ds, val_ds, backbone):
         val_sampler = torch.utils.data.distributed.DistributedSampler(val_ds,
                                                                       num_replicas=config["world_size"], rank=rank)
     if "samples" in config:
+        #eval_batch_size = min(config["optim_params"]["batch_size"], config["samples"])
         eval_batch_size = min(2 * config["optim_params"]["batch_size"], config["samples"])
     else:
+        #eval_batch_size = config["optim_params"]["batch_size"]
         eval_batch_size = 2 * config["optim_params"]["batch_size"]
 
     init_dl = torch.utils.data.DataLoader(train_ds, batch_size=eval_batch_size, pin_memory=True,
@@ -100,7 +104,10 @@ def train(gpu, config, shared_dict, barrier, train_ds, val_ds, backbone):
 
     model = FrameFieldModel(config, backbone=backbone, train_transform=train_online_cuda_transform,
                             eval_transform=eval_online_cuda_transform)
+
     model.cuda(gpu)
+
+
     if gpu == 0:
         print("Model has {} trainable params".format(count_trainable_params(model)))
 
@@ -125,7 +132,6 @@ def train(gpu, config, shared_dict, barrier, train_ds, val_ds, backbone):
         model, optimizer = amp.initialize(model, optimizer, opt_level="O1")
     elif config["use_amp"] and not APEX_AVAILABLE and gpu == 0:
         print_utils.print_warning("WARNING: Cannot use amp because the apex library is not available!")
-
     # Wrap the model for distributed training
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[gpu], find_unused_parameters=True)
 
@@ -138,6 +144,7 @@ def train(gpu, config, shared_dict, barrier, train_ds, val_ds, backbone):
     # lr_scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda=lr_warmup_func)
     # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
     lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, config["optim_params"]["gamma"])
+
 
     trainer = Trainer(rank, gpu, config, model, optimizer, loss_func,
                       run_dirpath=shared_dict["run_dirpath"],

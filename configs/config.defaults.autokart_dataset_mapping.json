@@ -1,0 +1,18 @@
+
+
+{
+  "defaults_filepath": "configs/config.defaults.json",
+
+  "dataset_params": {
+    "defaults_filepath": "configs/dataset_params.autokart_dataset_mapping.json"  // Path from the project's root to a JSON with default values for dataset_params
+
+  },
+
+  "backbone_params": {
+    "defaults_filepath": "configs/backbone_params.unet_resnet101.json"  // Path from the project's root to a JSON with default values for backbone_params
+  },
+
+  "eval_params" : {
+    "defaults_filepath": "configs/eval_params.mapping_dataset.json"  // Path from the project's root to a JSON with default values for eval_params
+  }
+}

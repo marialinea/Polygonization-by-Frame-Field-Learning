@@ -1,8 +1,6 @@
 {
   "data_dir_candidates": [
-    "/data/titane/user/nigirard/data",
-    "~/data",
-    "/data"
+    "./data"
   ],
   "num_workers": null,  // If null, will use multiprocess.cpu_count() workers in total
   "data_aug_params": {
@@ -22,7 +20,7 @@
 
   "seg_params": {
     "compute_interior": true,
-    "compute_edge": true,
+    "compute_edge": false,
     "compute_vertex": false
   },
 

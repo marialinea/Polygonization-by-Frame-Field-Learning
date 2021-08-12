@@ -10,14 +10,14 @@ import sys
 
 import torch
 import torch.multiprocessing
-
+"""
 try:
     __import__("frame_field_learning.local_utils")
 except ImportError:
     print("ERROR: The frame_field_learning package is not installed! "
           "Execute script setup.sh to install local dependencies such as frame_field_learning in develop mode.")
     exit()
-
+"""
 import frame_field_learning.local_utils
 
 from child_processes import train_process, eval_process
@@ -27,6 +27,7 @@ from eval_coco import eval_coco
 from lydorn_utils import run_utils, python_utils
 from lydorn_utils import print_utils
 
+import pdb
 
 # ---Examples of calling main.py: --- #
 #
@@ -162,8 +163,8 @@ def launch_inference_from_filepath(args):
     if config is None:
         config = run_utils.load_config(config_dirpath=run_dirpath)
     if config is None:
-        print_utils.print_error(f"ERROR: the default run's config file at {run_dirpath} could not be loaded. "
-                                f"Exiting now...")
+        print_utils.print_error("ERROR: the default run's config file at {run_dirpath} could not be loaded. ",
+                                "Exiting now...")
         sys.exit()
 
     # --- Add command-line arguments
@@ -172,7 +173,7 @@ def launch_inference_from_filepath(args):
     if args.eval_batch_size is not None:
         config["optim_params"]["eval_batch_size"] = args.eval_batch_size
     else:
-        config["optim_params"]["eval_batch_size"] = 2*config["optim_params"]["batch_size"]
+        config["optim_params"]["eval_batch_size"] = config["optim_params"]["batch_size"] *2
 
     # --- Load params in config set as relative path to another JSON file
     config = run_utils.load_defaults_in_config(config, filepath_key="defaults_filepath")
@@ -184,6 +185,7 @@ def launch_inference_from_filepath(args):
         config["eval_params"]["patch_overlap"] = args.eval_patch_overlap
 
     backbone = get_backbone(config["backbone_params"])
+
     inference_from_filepath(config, args.in_filepath, backbone, args.out_dirpath)
 
 
@@ -194,6 +196,10 @@ def launch_train(args):
         print_utils.print_error(
             "ERROR: cannot continue without a config file. Exiting now...")
         sys.exit()
+    # --- Load params in config set as relative path to another JSON file
+    config = run_utils.load_defaults_in_config(config, filepath_key="defaults_filepath")
+
+
     config["runs_dirpath"] = args.runs_dirpath
     if args.run_name is not None:
         config["run_name"] = args.run_name
@@ -223,8 +229,9 @@ def launch_train(args):
     config["nr"] = args.nr
     config["world_size"] = args.gpus * args.nodes
 
-    # --- Load params in config set as relative path to another JSON file
-    config = run_utils.load_defaults_in_config(config, filepath_key="defaults_filepath")
+
+
+
 
     # Setup num_workers per process:
     if config["num_workers"] is None:
@@ -273,9 +280,12 @@ def launch_eval(args):
     if config is None:
         config = run_utils.load_config(config_dirpath=run_dirpath)
     if config is None:
-        print_utils.print_error(f"ERROR: the default run's config file at {run_dirpath} could not be loaded. "
-                                f"Exiting now...")
+        print_utils.print_error("ERROR: the default run's config file at {run_dirpath} could not be loaded. ",
+                                "Exiting now...")
         sys.exit()
+
+    # --- Load params in config set as relative path to another JSON file
+    config = run_utils.load_defaults_in_config(config, filepath_key="defaults_filepath")
 
     # --- Third step: Replace parameters in config file from command-line arguments
     if args.dataset_params is not None:
@@ -287,21 +297,23 @@ def launch_eval(args):
     if args.eval_batch_size is not None:
         config["optim_params"]["eval_batch_size"] = args.eval_batch_size
     else:
-        config["optim_params"]["eval_batch_size"] = 2*config["optim_params"]["batch_size"]
+        config["optim_params"]["eval_batch_size"] = 1 #config["optim_params"]["batch_size"]*2
     config["fold"] = list(fold)
     config["nodes"] = args.nodes
     config["gpus"] = args.gpus
     config["nr"] = args.nr
     config["world_size"] = args.gpus * args.nodes
+    config["num_workers"] = 0
+    config["eval_params"]["save_aggregated_outputs"]["poly_coco"] = True
+    config["eval_params"]["save_aggregated_outputs"]["seg_coco"] = True
 
-    # --- Load params in config set as relative path to another JSON file
-    config = run_utils.load_defaults_in_config(config, filepath_key="defaults_filepath")
 
     config["eval_params"]["run_dirpath"] = run_dirpath
     if args.eval_patch_size is not None:
         config["eval_params"]["patch_size"] = args.eval_patch_size
     if args.eval_patch_overlap is not None:
         config["eval_params"]["patch_overlap"] = args.eval_patch_overlap
+
 
     # Setup num_workers per process:
     if config["num_workers"] is None:
@@ -318,7 +330,8 @@ def launch_eval(args):
     shared_dict["poly_coco_list"] = manager.list()
     barrier = manager.Barrier(args.gpus)
 
-    torch.multiprocessing.spawn(eval_process, nprocs=args.gpus, args=(config, shared_dict, barrier))
+    eval_process(args.gpus, config, shared_dict, barrier)
+    #torch.multiprocessing.spawn(eval_process, nprocs=args.gpus, args=(config, shared_dict, barrier))
 
 
 def launch_eval_coco(args):
@@ -372,7 +385,6 @@ def main():
     torch.manual_seed(0)
     # --- Process args --- #
     args = get_args()
-
     if args.in_filepath:  # Check if in_filepath is specified, it which case run the model on that image
         launch_inference_from_filepath(args)
     elif args.mode == "train":

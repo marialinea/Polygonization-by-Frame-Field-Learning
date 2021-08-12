@@ -40,6 +40,7 @@ def setup_run(config):
     else:
         init_checkpoints_dirpath = None
 
+    
     # setup run directory:
     run_dirpath = run_utils.setup_run_dir(runs_dir, run_name, new_run)
 

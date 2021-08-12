@@ -10,8 +10,8 @@
   "save_individual_outputs": {
     "seg": true,
     "seg_mask": true,
-    "poly_shapefile": true,
-    "poly_viz": false
+    "poly_shapefile": false,
+    "poly_viz": true
   },
 
   "save_aggregated_outputs": {

@@ -5,6 +5,7 @@ from tqdm import tqdm
 from multiprocess import Pool, Process, Queue
 from functools import partial
 import time
+import sys
 
 import torch
 import torch.utils.data
@@ -44,7 +45,6 @@ class Evaluator:
 
         # Prepare data saving:
         flag_filepath_format = os.path.join(self.eval_dirpath, split_name, "{}.flag")
-
         # Loading model
         self.load_checkpoint()
         self.model.eval()
@@ -74,10 +74,12 @@ class Evaluator:
 
         tile_data_list = []
 
-        if self.gpu == 0:
-            tile_iterator = tqdm(ds, desc="Eval {}: ".format(split_name), leave=True)
-        else:
-            tile_iterator = ds
+        #if self.gpu == 0:
+        #    tile_iterator = tqdm(ds, desc="Eval {}: ".format(split_name), leave=True)
+        #else:
+        #    tile_iterator = ds
+
+        tile_iterator = tqdm(ds, desc="Eval {}: ".format(split_name), leave=True)
         for tile_i, tile_data in enumerate(tile_iterator):
             # --- Inference, add result to tile_data_list
             if self.config["eval_params"]["patch_size"] is not None:
@@ -128,7 +130,7 @@ class Evaluator:
             if save_individual_outputs:
                 for sample in sample_list:
                     saver_async.add_work(sample)
-
+        
             # Store aggregated outputs:
             if save_aggregated_outputs:
                 self.shared_dict["name_list"].extend(accumulated_tile_data["name"])
@@ -149,7 +151,7 @@ class Evaluator:
                         self.shared_dict["seg_coco_list"].extend(annotations)
                 if self.config["eval_params"]["save_aggregated_outputs"]["poly_coco"]:
                     for sample in sample_list:
-                        annotations = save_utils.poly_coco(sample["polygons"], sample["polygon_probs"], sample["image_id"].item())
+                        annotations = save_utils.poly_coco(sample["polygons"], sample["polygon_probs"], sample["number"])
                         self.shared_dict["poly_coco_list"].append(annotations)  # annotations could be a dict, or a list
         # END of loop over samples
 
@@ -218,4 +220,5 @@ class Evaluator:
         # map_location is used to load on current device:
         checkpoint = torch.load(filepath, map_location="cuda:{}".format(self.gpu))
 
-        self.model.module.load_state_dict(checkpoint['model_state_dict'])
+        self.model.load_state_dict(checkpoint['model_state_dict'])
+        #self.model.module.load_state_dict(checkpoint['model_state_dict'])

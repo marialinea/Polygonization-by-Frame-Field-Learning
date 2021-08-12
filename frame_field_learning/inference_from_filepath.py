@@ -2,6 +2,8 @@ import os
 import numpy as np
 import skimage.io
 import torch
+import sys
+import shapely.geometry
 
 from tqdm import tqdm
 
@@ -12,7 +14,7 @@ from . import local_utils
 
 from torch_lydorn import torchvision
 
-from lydorn_utils import print_utils
+from lydorn_utils import print_utils, python_utils
 from lydorn_utils import run_utils
 
 
@@ -41,12 +43,48 @@ def inference_from_filepath(config, in_filepaths, backbone, out_dirpath=None):
         image_float = image / 255
         mean = np.mean(image_float.reshape(-1, image_float.shape[-1]), axis=0)
         std = np.std(image_float.reshape(-1, image_float.shape[-1]), axis=0)
+
         sample = {
             "image": torchvision.transforms.functional.to_tensor(image)[None, ...],
             "image_mean": torch.from_numpy(mean)[None, ...],
             "image_std": torch.from_numpy(std)[None, ...],
             "image_filepath": [in_filepath],
         }
+        # try:
+        #     if config['eval_params']['eval_iou']:
+        #         if config['dataset_params']['gt_source'] == "disk":
+        #
+        #             # Get image number from filename
+        #             tmp = in_filepath.split("/")[-1]
+        #             image_number = tmp.split('.')[0]
+        #
+        #             gt_base_filepath = os.path.join(config['dataset_params']['root_dirname'], 'raw', 'test', config['dataset_params']['gt_dirname'], '{}'.format(image_number)+"_mask_polygonized" )
+        #             gt_filepath = './data/' + gt_base_filepath + "." + config['dataset_params']['gt_type']
+        #             if not os.path.exists(gt_filepath):
+        #                 print("Error: Could not find file path to ground truth")
+        #                 continue
+        #             if config['dataset_params']['gt_type'] == "npy":
+        #                 np_gt_polygons = np.load(gt_filepath, allow_pickle=True)
+        #                 gt_polygons = []
+        #                 for np_gt_polygon in np_gt_polygons:
+        #                     try:
+        #                         gt_polygons.append(shapely.geometry.Polygon(np_gt_polygon[:, ::-1]))
+        #                     except ValueError:
+        #                         # Invalid polygon, continue without it
+        #                         continue
+        #                 sample["gt_polygons"] = gt_polygons
+        #             elif config['dataset_params']['gt_type'] == "geojson":
+        #                 geojson = python_utils.load_json(gt_filepath)
+        #                 sample["gt_polygons"] = list(shapely.geometry.shape(geojson))
+        #             elif config['dataset_params']['gt_type'] == "tif":
+        #                 sample["gt_polygons_image"] = skimage.io.imread(gt_filepath)[:, :, None]
+        #                 assert len(sample["gt_polygons_image"].shape) == 3 and sample["gt_polygons_image"].shape[2] == 1, \
+        #                     f"Mask should have shape (H, W, 1), not {sample['gt_polygons_image'].shape}..."
+        #     else:
+        #         pass
+        # except KeyError:
+        #     pass
+
 
         pbar.set_postfix(status="Inference")
         tile_data = inference.inference(config, model, sample, compute_polygonization=True)
@@ -63,8 +101,11 @@ def inference_from_filepath(config, in_filepaths, backbone, out_dirpath=None):
         # Figuring out_base_filepath out:
         if out_dirpath is None:
             out_dirpath = os.path.dirname(in_filepath)
+
         base_filename = os.path.splitext(os.path.basename(in_filepath))[0]
         out_base_filepath = (out_dirpath, base_filename)
+
+
 
         if config["compute_seg"]:
             if config["eval_params"]["save_individual_outputs"]["seg_mask"]:

@@ -1,6 +1,6 @@
 {
   "root_dirname": "mapping_challenge_dataset",
-  "small": false,
+  "small": true,
 
   "seed": 0,  // Change this to change the random splitting of data in train/val/test
   "train_fraction": 0.75  // Remaining is validation

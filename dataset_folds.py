@@ -145,6 +145,85 @@ def get_mapping_challenge(config, root_dir, folds):
     return ds_list
 
 
+def get_autokart_dataset_inria(config, root_dir, folds):
+    from autokart_dataset_inria import Autokart
+
+    # --- Online transform done on the host (CPU):
+    online_cpu_transform = data_transforms.get_online_cpu_transform(config, augmentations=config["data_aug_params"]["enable"])
+    mask_only = config["dataset_params"]["mask_only"]
+    kwargs = {
+        "pre_process": config["dataset_params"]["pre_process"],
+        "transform": online_cpu_transform,
+        "patch_size": config["dataset_params"]["data_patch_size"],
+        "patch_stride": config["dataset_params"]["input_patch_size"],
+        "pre_transform": data_transforms.get_offline_transform_patch(distances=not mask_only, sizes=not mask_only),
+        "small": config["dataset_params"]["small"],
+        "pool_size": config["num_workers"],
+        "gt_source": config["dataset_params"]["gt_source"],
+        "gt_type": config["dataset_params"]["gt_type"],
+        "gt_dirname": config["dataset_params"]["gt_dirname"],
+        "mask_only": mask_only,
+        "processed_dirname": config["dataset_params"]["processed_dirname"]
+    }
+    print_utils.print_info("IMAGE INFO: Images are split into patches of {} pixels".format(config["dataset_params"]["processed_dirname"].split("_")[-1]))
+
+
+    ds_list = []
+    for fold in folds:
+        if fold == "train":
+            ds = Autokart(root_dir, fold="train", **kwargs)
+            ds_list.append(ds)
+        elif fold == "val":
+            ds = Autokart(root_dir, fold="val", **kwargs)
+            ds_list.append(ds)
+        elif fold == "train_val":
+            ds_train = Autokart(root_dir, fold="train", **kwargs)
+            ds_list.append(ds_train)
+            ds_val = Autokart(root_dir, fold="val", **kwargs)
+            ds_list.append(ds_val)
+        elif fold == "test":
+            ds = Autokart(root_dir, fold="test", **kwargs)
+            ds_list.append(ds)
+        else:
+            print_utils.print_error("ERROR: fold \"{}\" not recognized, implement it in dataset_folds.py.".format(fold))
+
+    return ds_list
+
+
+def get_autokart_dataset_mapping(config, root_dir, folds):
+    from autokart_dataset_mapping import Autokart
+
+    if "train" in folds or "val" in folds or "train_val" in folds:
+        train_online_cpu_transform = data_transforms.get_online_cpu_transform(config,
+                                                                              augmentations=config["data_aug_params"][
+                                                                                  "enable"])
+        ds = Autokart(root_dir,
+                              transform=train_online_cpu_transform,
+                              pre_transform=data_transforms.get_offline_transform_patch(),
+                              small=False,
+                              fold="train",
+                              pool_size=config["num_workers"])
+        torch.manual_seed(config["dataset_params"]["seed"])  # Ensure a seed is set
+        train_split_length = int(round(config["dataset_params"]["train_fraction"] * len(ds)))
+        val_split_length = len(ds) - train_split_length
+        train_ds, val_ds = torch.utils.data.random_split(ds, [train_split_length, val_split_length])
+
+    ds_list = []
+    for fold in folds:
+        if fold == "train":
+            ds_list.append(train_ds)
+        elif fold == "val":
+            ds_list.append(val_ds)
+        elif fold == "train_val":
+            ds_list.append(ds)
+        else:
+            print_utils.print_error("ERROR: fold \"{}\" not recognized, implement it in dataset_folds.py.".format(fold))
+            exit()
+
+    return ds_list
+
+
+
 def get_opencities_competition(config, root_dir, folds):
     from torch_lydorn.torchvision.datasets import RasterizedOpenCities, OpenCitiesTestDataset
 
@@ -220,6 +299,10 @@ def get_folds(config, root_dir, folds):
 
     elif config["dataset_params"]["root_dirname"] == "mapping_challenge_dataset":
         return get_mapping_challenge(config, root_dir, folds)
+
+    elif config["dataset_params"]["root_dirname"] == "autokart_dataset":
+        return get_autokart_dataset_inria(config, root_dir, folds)
+        #return get_autokart_dataset_mapping(config, root_dir, folds)
 
     elif config["dataset_params"]["root_dirname"] == "segbuildings":
         return get_opencities_competition(config, root_dir, folds)

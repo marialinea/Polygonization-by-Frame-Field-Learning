@@ -364,6 +364,13 @@ def polygonize(seg_batch, crossfield_batch, config, pool=None, pre_computed=None
         init_contours_batch = pre_computed["init_contours_batch"]
 
     # debug_print("Convert contours to tensorpoly")
+
+    ########### Koden gir en feilmelding hvis det ikke er noen polygoner i bilde, så returnerer None hvis det er tilfellet
+    if len(init_contours_batch) == 0 or not init_contours_batch[0]:
+        polygons_batch = None
+        probs_batch = None
+        return polygons_batch, probs_batch
+    ###########
     tensorpoly = contours_batch_to_tensorpoly(init_contours_batch)
 
     # debug_print("Optimize")

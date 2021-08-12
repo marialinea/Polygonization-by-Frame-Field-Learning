@@ -9,6 +9,7 @@ from backbone import get_backbone
 from dataset_folds import get_folds
 
 
+
 def train_process(gpu, config, shared_dict, barrier):
     from frame_field_learning.train import train
 
@@ -22,6 +23,7 @@ def train_process(gpu, config, shared_dict, barrier):
         print_utils.print_error("GPU {} -> ERROR: Data root directory amongst \"{}\" not found!".format(gpu, paths_tried))
         exit()
     print_utils.print_info("GPU {} -> Using data from {}".format(gpu, root_dir))
+
 
     # --- Get dataset splits
     # - CHANGE HERE TO ADD YOUR OWN DATASET
@@ -46,12 +48,18 @@ def train_process(gpu, config, shared_dict, barrier):
                 .format(config["backbone_params"]["name"])
     backbone = get_backbone(config["backbone_params"])
 
+
     # --- Launch training
+
     train(gpu, config, shared_dict, barrier, train_ds, val_ds, backbone)
 
 
 def eval_process(gpu, config, shared_dict, barrier):
     from frame_field_learning.evaluate import evaluate
+
+    if gpu == 1:
+        gpu = 0
+    
 
     torch.manual_seed(0)  # Ensure same seed for all processes
     # --- Find data directory --- #
@@ -73,4 +81,3 @@ def eval_process(gpu, config, shared_dict, barrier):
     backbone = get_backbone(config["backbone_params"])
 
     evaluate(gpu, config, shared_dict, barrier, eval_ds, backbone)
-

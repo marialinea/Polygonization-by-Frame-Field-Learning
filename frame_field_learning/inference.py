@@ -6,6 +6,9 @@ import scipy
 import numpy as np
 import torch
 
+import warnings
+warnings.simplefilter("ignore", UserWarning)
+
 from . import local_utils
 from . import polygonize
 
@@ -21,6 +24,7 @@ def network_inference(config, model, batch):
 
 
 def inference(config, model, tile_data, compute_polygonization=False, pool=None):
+    
     if config["eval_params"]["patch_size"] is not None:
         # Cut image into patches for inference
         inference_with_patching(config, model, tile_data)
@@ -80,6 +84,7 @@ def inference_with_patching(config, model, tile_data):
         f"When using inference with patching, tile_data should have a batch size of 1, " \
         f"with image's shape being (1, C, H, W), not {tile_data['image'].shape}"
     with torch.no_grad():
+
         # Init tile outputs (image is (N, C, H, W)):
         height = tile_data["image"].shape[2]
         width = tile_data["image"].shape[3]
@@ -108,6 +113,7 @@ def inference_with_patching(config, model, tile_data):
         patch_weights = patch_weights[1:-1, 1:-1]
         patch_weights = torch.tensor(patch_weights, device=config["device"]).float()
         patch_weights = patch_weights[None, None, :, :]  # Adding batch and channels dims
+
 
         # Predict on each patch and save in outputs:
         for bbox in tqdm(patch_boundingboxes, desc="Running model on patches", leave=False):

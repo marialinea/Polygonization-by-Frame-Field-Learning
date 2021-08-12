@@ -3,7 +3,7 @@
 
   "test_time_augmentation": false,
 
-  "batch_size_mult": 64,  // Inference has a certain batch_size, post-process (polygonization included) will use a batch of size batch_size*batch_size_mult
+  "batch_size_mult": 1,  // 64, Inference has a certain batch_size, post-process (polygonization included) will use a batch of size batch_size*batch_size_mult
     // ASM:
     // eval_batch_size=32, batch_size_mult=1: finished 96 batches in 290s: 0,094401042s/sample
     // eval_batch_size=32, batch_size_mult=16: finished 96 batches in 167s: 0,054361979s/sample
@@ -29,16 +29,16 @@
     "seg_mask": false,
     "seg_opencities_mask": false,
     "seg_luxcarta": false,
-    "crossfield": false,
+    "crossfield": true, // changed from false to true
     "uv_angles": false,
-    "poly_shapefile": false,
+    "poly_shapefile": true, // changed from false to true
     "poly_geojson": false,
     "poly_viz": false
   },
 
   "save_aggregated_outputs": {
-    "stats": false,
-    "seg_coco": false,
-    "poly_coco": false
+    "stats": true,
+    "seg_coco": true,
+    "poly_coco": true
   }
 }

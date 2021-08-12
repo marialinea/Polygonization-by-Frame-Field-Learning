@@ -18,7 +18,7 @@ def compute_polygon_angles(polygon):
     longest_edge = min_rot_rect_edges[max_norms_index]
     main_angle = np.angle(longest_edge[0] + 1j*longest_edge[1])
     polygon = shapely.affinity.rotate(polygon, -main_angle, use_radians=True)
-    
+
     contour = np.array(polygon.exterior)
     edges = contour[1:] - contour[:-1]
     edges = edges[:, 1] + 1j * edges[:, 0]
@@ -74,12 +74,16 @@ def main():
 
     list_info = [
         {
-            "name": "ICTNet",
-            "mask_filepath": "inria_dataset_test_sample_result.ictlab.jpg"
+            "name": "InriaPreTrained, epoch 234",
+            "mask_filepath": "/nr/samba/jodata10/pro/autokart/usr/maria/framefield/data/misc/mask/0122_32cmm_inria_epoch234.tif"
         },
         {
-            "name": "Ours",
-            "mask_filepath": "inria_dataset_test_sample_result.ours.tif"
+            "name": "Autokart, epoch 275",
+            "mask_filepath": "/nr/samba/jodata10/pro/autokart/usr/maria/framefield/data/misc/mask/0122_processed_epoch275.tif"
+        },
+        {
+            "name": "Autokart, epoch 262",
+            "mask_filepath": "/nr/samba/jodata10/pro/autokart/usr/maria/framefield/data/misc/mask/0122_orig-size_autokart_epoch262.tif"
         },
     ]
 

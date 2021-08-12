@@ -17,6 +17,9 @@ import torch_lydorn
 from tqdm import tqdm
 import skimage.io
 import torch
+import pdb
+import tifffile
+
 
 try:
     __import__("frame_field_learning.local_utils")
@@ -114,7 +117,6 @@ def polygonize_mask(config, mask_filepaths, backbone, out_ext):
 
     # --- Online transform performed on the device (GPU):
     eval_online_cuda_transform = data_transforms.get_eval_online_cuda_transform(config)
-
     print("Loading model...")
     model = FrameFieldModel(config, backbone=backbone, eval_transform=eval_online_cuda_transform)
     model.to(config["device"])
@@ -125,11 +127,18 @@ def polygonize_mask(config, mask_filepaths, backbone, out_ext):
 
     rasterizer = torch_lydorn.torchvision.transforms.Rasterize(fill=True, edges=False, vertices=False)
 
-    # Read image
+   # Read image
+
     pbar = tqdm(mask_filepaths, desc="Infer images")
     for mask_filepath in pbar:
         pbar.set_postfix(status="Loading mask image")
-        mask_image = skimage.io.imread(mask_filepath)
+        #mask_image = skimage.io.imread(mask_filepath)
+        mask_image = tifffile.imread(mask_filepath)
+
+        # Removes pictures that do not contain any buildings
+        if not np.ndarray.any(mask_image):
+            os.remove(mask_filepath)
+            continue
 
         input_image = mask_image
         if len(input_image.shape) == 2:
@@ -159,27 +168,42 @@ def polygonize_mask(config, mask_filepaths, backbone, out_ext):
         pbar.set_postfix(status="Saving output")
         tile_data = local_utils.batch_to_cpu(tile_data)
         tile_data = local_utils.split_batch(tile_data)[0]
-        base_filepath = os.path.splitext(mask_filepath)[0]
+
+        base_filepath = os.path.split(mask_filepath)
+
+
+
+
         # save_utils.save_polygons(tile_data["polygons"], base_filepath, "polygons", tile_data["image_filepath"])
         # save_utils.save_poly_viz(tile_data["image"], tile_data["polygons"], tile_data["polygon_probs"], base_filepath, name)
         # geo_utils.save_shapefile_from_shapely_polygons(tile_data["polygons"], mask_filepath, base_filepath + "." + name + ".shp")
 
+
+        # --- Saving new files ---
+        new_path = base_filepath[0] + "/{}/".format(out_ext)
+
+        if not os.path.exists(new_path):
+            os.makedirs(new_path)
+
+        new_name = base_filepath[-1].split(".")[0] + "_polygonized"
+
         if out_ext == "geojson":
-            save_utils.save_geojson(tile_data["polygons"], base_filepath)
+            save_utils.save_geojson(tile_data["polygons"], new_path, new_name, mask_filepath)
+
         elif out_ext == "shp":
-            save_utils.save_shapefile(tile_data["polygons"], base_filepath, "polygonized", mask_filepath)
+            save_utils.save_shapefile(tile_data["polygons"], new_path, new_name, mask_filepath)
         else:
             raise ValueError(f"out_ext '{out_ext}' invalid!")
 
-        # --- Compute IoU of mask image and extracted polygons
+       # --- Compute IoU of mask image and extracted polygons
         polygons_raster = rasterizer(mask_image, tile_data["polygons"])[:, :, 0]
         mask = 128 < mask_image
+        mask = skimage.color.rgb2gray(mask)  # mask image has three channels, reducing to one
         polygons_mask = 128 < polygons_raster
         iou = measures.iou(torch.tensor(polygons_mask).view(1, -1), torch.tensor(mask).view(1, -1), threshold=0.5)
         print("IoU:", iou.item())
         if iou < 0.9:
             print(mask_filepath)
-
 
 def main():
     torch.manual_seed(0)
@@ -188,7 +212,7 @@ def main():
 
     # --- Setup run --- #
     run_dirpath = local_utils.get_run_dirpath(args.runs_dirpath, args.run_name)
-    # Load run's config file:
+    #Load run's config file:
     config = run_utils.load_config(config_dirpath=run_dirpath)
     if config is None:
         print_utils.print_error(
@@ -202,7 +226,6 @@ def main():
         config["eval_params"]["patch_overlap"] = args.eval_patch_overlap
 
     backbone = get_backbone(config["backbone_params"])
-
     polygonize_mask(config, args.filepath, backbone, args.out_ext)
 
 

@@ -1,0 +1,81 @@
+
+
+{
+  "data_dir_candidates": [
+    "./data"
+  ],
+  "num_workers": null,  // If null, will use multiprocess.cpu_count() workers in total
+  "data_aug_params": {
+    "enable": true,
+    "vflip": true,
+    "affine": true,
+    "scaling": [0.75, 1.5],  // Range of scaling factor to apply during affine transform. Set to None to not apply.
+    "color_jitter": true,
+    "device": "cuda"
+  },
+
+  "device": "cuda",  // Only has effects when mode is val or test. When mode is train, always use CUDA
+  "use_amp": false,  // Automatic Mixed Precision switch
+
+  "compute_seg": true,
+  "compute_crossfield": true,
+
+  "seg_params": {
+    "compute_interior": true,
+    "compute_edge": true,
+    "compute_vertex": false
+  },
+
+  "loss_params": {
+    "multiloss": {
+      "normalization_params": {
+        "min_samples": 10,  // Per GPU
+        "max_samples": 1000  // Per GPU
+      },
+      "coefs": {
+        "epoch_thresholds": [0, 5, 10],  // From 0 to 5: gradually go from coefs[0] to coefs[1] for list coefs
+        "seg": 10,
+        "crossfield_align": 1,
+        "crossfield_align90": 0.2,
+        "crossfield_smooth": 0.005,
+        "seg_interior_crossfield": [0, 0, 0.2],
+        "seg_edge_crossfield": [0, 0, 0.2],
+        "seg_edge_interior": [0, 0, 0.2]
+      }
+    },
+    "seg_loss_params": {  // https://github.com/neptune-ai/open-solution-mapping-challenge/blob/master/neptune.yaml
+      "bce_coef": 1.0,
+      "dice_coef": 0.2,
+      "use_dist": true,  // Dist weights as in the original U-Net paper
+      "use_size": true,  // Size weights increasing importance of smaller buildings
+      "w0": 50,  // From original U-Net paper: distance weight to increase loss between objects
+      "sigma": 10  // From original U-Net paper: distance weight to increase loss between objects
+    }
+  },
+
+  "optim_params": {
+    "optimizer": "Adam",
+    "batch_size": 8,  // Batch size per GPU. The effective batch size is effective_batch_size=world_size*batch_size
+    "base_lr": 1e-3,  // Will be multiplied by the effective_batch_size=world_size*batch_size.
+    "max_lr": 1e-1,  // Maximum resulting learning rate
+    "gamma": 0.95,  // Gamma of exponential learning rate scheduler
+    "weight_decay": 0,  // Not used
+    "dropout_keep_prob": 1.0,  // Not used
+    "max_epoch": 1000,
+    "log_steps": 200,
+    "checkpoint_epoch": 1,
+    "checkpoints_to_keep": 5,  // outputs
+    "logs_dirname": "logs",
+    "checkpoints_dirname": "checkpoints"
+  },
+
+  "polygonize_params": {
+    "defaults_filepath": "configs/polygonize_params.json"  // Path from the project's root to a JSON with default values for polygonize_params
+  },
+
+  "dataset_params": {
+    "root_dirname": "autokart_dataset",
+    "small": false,
+  }
+
+}

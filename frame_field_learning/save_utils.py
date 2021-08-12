@@ -22,11 +22,11 @@ def get_save_filepath(base_filepath, name=None, ext=""):
             save_filepath = os.path.join(base_filepath[0], base_filepath[1] + ext)
     elif type(base_filepath) is str:
         if name is not None:
-            save_filepath = base_filepath + "." + name + ext
+            save_filepath = base_filepath +  name + ext
         else:
             save_filepath = base_filepath + ext
     else:
-        raise TypeError(f"base_filepath should be either of tuple or str, not {type(base_filepath)}")
+        raise TypeError("base_filepath should be either of tuple or str, not {type(base_filepath)}")
     os.makedirs(os.path.dirname(save_filepath), exist_ok=True)
     return save_filepath
 
@@ -233,7 +233,7 @@ def seg_coco(sample):
         image_mask = labels == (i + 1)  # The mask has to span the whole image
         rle = pycocotools.mask.encode(np.asfortranarray(image_mask))
         rle["counts"] = rle["counts"].decode("utf-8")
-        image_id = sample["image_id"].item()
+        image_id = sample["number"]#.item()
         annotation = {
             "category_id": 100,  # Building
             "bbox": coco_bbox,

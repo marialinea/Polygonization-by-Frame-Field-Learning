@@ -136,10 +136,12 @@ def eval_one(im_gt_pred_filepath, overwrite=False):
 
 def main():
     args = get_args()
+
     print_utils.print_info(f"INFO: evaluating {len(args.pred_filepath)} predictions.")
 
     # Match files together
-    im_gt_pred_filepaths = match_im_gt_pred(args.im_filepath, args.gt_filepath, args.pred_filepath)
+    #im_gt_pred_filepaths = match_im_gt_pred(args.im_filepath, args.gt_filepath, args.pred_filepath)
+    im_gt_pred_filepaths = [('./data/autokart_dataset/raw/test/images/0122.tif'), './data/autokart_dataset/raw/test/ground_truth/geojson/0122_mask_polygonized.geojson', './data/misc/poly_shapefile.simple.tol_1/0122_orig-size_autokart_epoch275.shp')]
 
     pool = Pool()
     metrics_iou_list = list(tqdm(pool.imap(partial(eval_one, overwrite=args.overwrite), im_gt_pred_filepaths), desc="Compute eval metrics", total=len(im_gt_pred_filepaths)))
